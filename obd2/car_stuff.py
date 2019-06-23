@@ -1,5 +1,4 @@
 import sys,os
-sys.path.append("/home/pi/Documents/python-OBD/")
 import obd
 import datetime as dt
 import time
