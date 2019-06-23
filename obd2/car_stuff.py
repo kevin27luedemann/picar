@@ -2,41 +2,52 @@ import sys,os
 import obd
 import datetime as dt
 import time
+from pprint import pprint
+import json
+import signal
 
-cmds = [obd.commands.SPEED,
-        obd.commands.RPM,
-        obd.commands.ENGINE_LOAD,
-        obd.commands.THROTTLE_POS,
-        obd.commands.FUEL_LEVEL,
-        obd.commands.FUEL_RATE,
-        #obd.commands.FUEL_STATUS,
-        obd.commands.COOLANT_TEMP,
-        obd.commands.DISTANCE_W_MIL,
-        obd.commands.DISTANCE_SINCE_DTC_CLEAR,
-        obd.commands.OIL_TEMP
-       # obd.commands.ELM_VOLTAGE
+cmds = ["SPEED",
+        "RPM",
+        "ENGINE_LOAD",
+        "THROTTLE_POS",
+        "FUEL_LEVEL",
+        "COOLANT_TEMP",
+        "DISTANCE_W_MIL"
         ]
+
+interupt_flag   = True
+def signal_handler(sig, frame):
+    global interupt_flag
+    interupt_flag = False
+signal.signal(signal.SIGINT, signal_handler)
     
 def main():
-    con = obd.OBD("/dev/serial0",115200)
+    global interupt_flag
+    save    = True
+    con     = obd.OBD("/dev/serial0",115200)
     print(con.status())
-    now         = dt.datetime.now()
-    file_name   = dt.datetime.strftime(now,"%Y%m%d_%H%M%S.dat")
-    print(file_name)
-    #dafi    = open(file_name,"w+")
     counter = 0
-    while(counter < 2):
-        status = []
-        for cmd in cmds:
-            status.append(con.query(cmd).value)
-        print(status)
-        #dafi.write("".join(status))
+    data    = {}
+    while(interupt_flag):
+        status = {}
+        for cmd in sorted(cmds):
+            status.update({cmd:str(con.query(obd.commands[cmd]).value)})
+        now   = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S")
+        data.update({now:status})
+        pprint(status)
         time.sleep(1)
         counter = counter + 1
+        if counter >= 600:
+            if save:
+                with open(now+".dat","w+") as dafi:
+                    json.dump(data,dafi,sort_keys=True,indent=4)
+            data    = {}
+            counter = 0
 
-    #dafi.close()
-
-
+    if save:
+        now   = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S")
+        with open(now+".dat","w+") as dafi:
+            json.dump(data,dafi,sort_keys=True,indent=4)
 
 if __name__ == "__main__":
     main()
