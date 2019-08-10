@@ -27,15 +27,19 @@ def main():
     parser.add_option("", "--debug",
                       action="store_true", dest="debug", default=False,
                       help="print debug output")
+    parser.add_option("", "--noloop",
+                      action="store_true", dest="noloop", default=False,
+                      help="do not loop, only run once")
+
 
     (options, args) = parser.parse_args()
 
     con     = obd.OBD("/dev/serial0",115200,fast=False)
+    if options.debug:
+        obd.logger.setLevel(obd.logging.DEBUG)
     if not(options.quiet):
         print(con.status())
     cmdsup  = con.supported_commands
-    if options.debug:
-        obd.logger.setLevel(obd.logging.DEBUG)
     cmds    = []
     for cmd in cmdsup:
         if  not("DTC" in cmd.name) and \
@@ -50,6 +54,8 @@ def main():
     counter = 0
     data    = {}
     while(interupt_flag):
+        if options.noloop:
+            interupt_flag = False
         status = {}
         for cmd in sorted(cmds):
             status.update({cmd:str(con.query(obd.commands[cmd]).value)})
