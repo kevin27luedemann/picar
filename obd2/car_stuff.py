@@ -31,11 +31,11 @@ def main():
     while(interupt_flag):
         status = {}
         for cmd in sorted(cmds):
-            status.update({cmd:str(con.query(obd.commands[cmd]).value)})
+            status.update({cmd:str(con.query(obd.commands[cmd],force=True).value)})
         now   = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S")
         data.update({now:status})
         pprint(status)
-        time.sleep(1)
+        time.sleep(2)
         counter = counter + 1
         if counter >= 600:
             if save:
@@ -48,6 +48,7 @@ def main():
         now   = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S")
         with open(now+".dat","w+") as dafi:
             json.dump(data,dafi,sort_keys=True,indent=4)
+    con.close()
 
 if __name__ == "__main__":
     main()
