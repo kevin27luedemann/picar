@@ -7,6 +7,7 @@ import animation as an
 def main():
     f           = h5py.File("./demo.hdf5","r",swmr=True)
     dset        = f["/sequence"]
+    print(dset.shape)
     it,dy,dx    = dset.shape
 
     ani = an.anim.anim( [dset],
