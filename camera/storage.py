@@ -31,6 +31,7 @@ def main():
     camera.capture(dummy,use_video_port=True,format="yuv")
     dset                = f.create_dataset( "sequence",
                                             data=[dummy.array[:,:,0]],
+                                            dtype="u8",
                                             maxshape=(  None,
                                                         dummy.array.shape[0],
                                                         dummy.array.shape[1]),
