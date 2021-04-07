@@ -21,10 +21,10 @@ def main():
     f.swmr_mode         = True
     
     camera              = PiCamera()
-    #camera.resolution   = (1920,1080)
+    camera.resolution   = (1920,1080)
     #camera.resolution   = (1296,730)
-    camera.resolution   = (640,480)
-    camera.framerate    = 10
+    #camera.resolution   = (640,480)
+    camera.framerate    = 30
 
     #start warm up befor recording to get exposure right
     camera.start_preview()
@@ -36,8 +36,8 @@ def main():
     dset                = f.create_dataset( "sequence",
                                             data=[dummy.array[:,:,0]],
                                             dtype="u8",
-                                            #compression="gzip",
-                                            #compression_opts=4,
+                                            compression="gzip",
+                                            compression_opts=6,
                                             maxshape=(  None,
                                                         dummy.array.shape[0],
                                                         dummy.array.shape[1]),
@@ -50,13 +50,12 @@ def main():
     
     #start actual recording
     camera.start_recording(stream, format="h264")
-    #camera.start_recording(h5_writer, format="yuv", splitter_port=2,resize=(1296,730))
-    camera.start_recording(h5_writer, format="yuv", splitter_port=2)
-    camera.wait_recording(10)
+    for i in range(10):
+        camera.capture(h5_writer, format="yuv", use_video_port=True)
+        camera.wait_recording(1)
 
     #stop all the recording
     camera.stop_recording()
-    camera.stop_recording(splitter_port=2)
 
     #save the ring buffer to file
     stream.copy_to("my_stream.mp4",seconds=10)
