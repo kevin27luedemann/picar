@@ -6,6 +6,7 @@ from picamera import array
 import matplotlib.pyplot as plt
 from io import BytesIO
 from PIL import Image
+from fractions import Fraction
 
 def capture_to_image_obj():
     camera  = PiCamera()
@@ -31,17 +32,24 @@ def capture_to_image_obj():
     plt.show()
 
 def main():
-    camera  = PiCamera()
 
     # Create the in-memory stream
     #reso                = (2592, 1944) #largest possible resolution (full view)
     reso                = (3280,2464) #largest possible resolution (full view)
     #reso                = (1920, 1080)
-    camera.resolution   = reso
+    #camera.framerate    = 2.0
+    #camera.resolution   = reso
+    #camera.framerate    = 30
+    camera  = PiCamera( resolution=reso,
+                        framerate=Fraction(1,6),
+                        sensor_mode=3
+                        )
+    camera.shutter_speed = 10000000
+    camera.iso          = 800
 
     camera.start_preview()
     # Camera warm-up time
-    time.sleep(2)
+    time.sleep(20)
 
     output              = array.PiYUVArray(camera,size=reso)
     camera.capture(output, format='yuv')
