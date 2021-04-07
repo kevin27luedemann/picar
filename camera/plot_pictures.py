@@ -12,7 +12,8 @@ def capture_to_image_obj():
 
     # Create the in-memory stream
     stream = BytesIO()
-    reso                = (2592, 1944) #largest possible resolution (full view)
+    #reso                = (2592, 1944) #largest possible resolution (full view)
+    reso                = (3280,2464) #largest possible resolution (full view)
     #reso                = (1920, 1088)
     camera.resolution   = reso
 
@@ -33,7 +34,8 @@ def main():
     camera  = PiCamera()
 
     # Create the in-memory stream
-    reso                = (2592, 1944) #largest possible resolution (full view)
+    #reso                = (2592, 1944) #largest possible resolution (full view)
+    reso                = (3280,2464) #largest possible resolution (full view)
     #reso                = (1920, 1080)
     camera.resolution   = reso
 
