@@ -150,7 +150,7 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
             start       = time.time()
             PIC         = take_picture(camera)
             stop1       = time.time()
-            #write_dset(PIC,d_pic[0])
+            write_dset(PIC,d_pic[0])
             t_sec       = time_diff_sec(dt.datetime.now())
             write_dset(t_sec,d_pic[1])
             stop2       = time.time()
