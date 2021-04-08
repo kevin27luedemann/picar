@@ -155,9 +155,9 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
             write_dset(t_sec,d_pic[1])
             stop2       = time.time()
             if not(quiet):
-                print("Pic: {}s".format(stop1-start))
-                print("Wri: {}s".format(stop2-stop1))
-                print("All: {}s".format(stop2-start))
+                print("Pic: {}".format(stop1-start))
+                print("Wri: {}".format(stop2-stop1))
+                print("All: {}".format(stop2-start))
             l_pic_ti    = c_pic_ti
 
         start       = time.time()
@@ -166,9 +166,9 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
         write_dset(GPS_point,d_gps)
         stop2       = time.time()
         if not(quiet):
-            print("GPS: {}s".format(stop1-start))
-            print("Wri: {}s".format(stop2-stop1))
-            print("All: {}s".format(stop2-start))
+            print("GPS: {}".format(stop1-start))
+            print("Wri: {}".format(stop2-stop1))
+            print("All: {}".format(stop2-start))
 
         time.sleep(1)
         counter += 1
@@ -176,7 +176,10 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
 if __name__ == "__main__":
     parser = OptionParser()
 
-    parser.add_option(  "-f", "--postfix", dest="postfix",
+    parser.add_option(  "-f", "--praefix", dest="praefix",
+                        default="",
+                        help="Specify custom input file praefix")
+    parser.add_option(  "", "--postfix", dest="postfix",
                         default="",
                         help="Specify custom input file postfix")
     parser.add_option(  "-q", "--quiet", dest="quiet",
@@ -191,10 +194,13 @@ if __name__ == "__main__":
     fname               = dt.datetime.strftime( dt.datetime.now(),"%Y%m%d")
     fname               = fname + options.postfix
     fname               = fname + ".hdf5"
+    fname               = options.praefix + fname
+
     if not(options.quiet):
         print(fname)
 
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM,signal_handler)
     #setup is done here
     init_gps()
     cam                 = init_camera()
