@@ -40,16 +40,19 @@ def main():
     #camera.framerate    = 2.0
     #camera.resolution   = reso
     #camera.framerate    = 30
-    camera  = PiCamera( resolution=reso,
-                        framerate=Fraction(1,6),
-                        sensor_mode=3
+    camera  = PiCamera( 
+                        resolution=reso
+                        #resolution=reso,
+                        #framerate=Fraction(1,6),
+                        #sensor_mode=3
                         )
-    camera.shutter_speed = 10000000
-    camera.iso          = 800
+    #camera.shutter_speed = 10000000
+    #camera.iso          = 800
 
     camera.start_preview()
     # Camera warm-up time
-    time.sleep(20)
+    #time.sleep(20)
+    time.sleep(2)
 
     output              = array.PiYUVArray(camera,size=reso)
     camera.capture(output, format='yuv')
