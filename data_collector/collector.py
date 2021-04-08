@@ -176,6 +176,9 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
 if __name__ == "__main__":
     parser = OptionParser()
 
+    parser.add_option(  "-f", "--praefix", dest="praefix",
+                        default="",
+                        help="Specify custom input file praefix")
     parser.add_option(  "-f", "--postfix", dest="postfix",
                         default="",
                         help="Specify custom input file postfix")
@@ -191,6 +194,8 @@ if __name__ == "__main__":
     fname               = dt.datetime.strftime( dt.datetime.now(),"%Y%m%d")
     fname               = fname + options.postfix
     fname               = fname + ".hdf5"
+    fname               = options.praefix + fname
+
     if not(options.quiet):
         print(fname)
 
