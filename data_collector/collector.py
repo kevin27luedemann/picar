@@ -155,9 +155,9 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
             write_dset(t_sec,d_pic[1])
             stop2       = time.time()
             if not(quiet):
-                print("Pic: {}s".format(stop1-start))
-                print("Wri: {}s".format(stop2-stop1))
-                print("All: {}s".format(stop2-start))
+                print("Pic: {}".format(stop1-start))
+                print("Wri: {}".format(stop2-stop1))
+                print("All: {}".format(stop2-start))
             l_pic_ti    = c_pic_ti
 
         start       = time.time()
@@ -166,9 +166,9 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
         write_dset(GPS_point,d_gps)
         stop2       = time.time()
         if not(quiet):
-            print("GPS: {}s".format(stop1-start))
-            print("Wri: {}s".format(stop2-stop1))
-            print("All: {}s".format(stop2-start))
+            print("GPS: {}".format(stop1-start))
+            print("Wri: {}".format(stop2-stop1))
+            print("All: {}".format(stop2-start))
 
         time.sleep(1)
         counter += 1
