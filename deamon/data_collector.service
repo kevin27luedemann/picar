@@ -1,0 +1,12 @@
+ [Unit]
+ Description=Data collection service
+ After=multi-user.target
+
+ [Service]
+ Type=idle
+ User=pi
+ Group=pi
+ ExecStart=/usr/bin/python3 /home/pi/Documents/picar/data_collector/collector.py --praefix /home/pi/data/ -q
+
+ [Install]
+ WantedBy=multi-user.target

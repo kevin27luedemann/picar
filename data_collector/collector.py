@@ -179,7 +179,7 @@ if __name__ == "__main__":
     parser.add_option(  "-f", "--praefix", dest="praefix",
                         default="",
                         help="Specify custom input file praefix")
-    parser.add_option(  "-f", "--postfix", dest="postfix",
+    parser.add_option(  "", "--postfix", dest="postfix",
                         default="",
                         help="Specify custom input file postfix")
     parser.add_option(  "-q", "--quiet", dest="quiet",
@@ -200,6 +200,7 @@ if __name__ == "__main__":
         print(fname)
 
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM,signal_handler)
     #setup is done here
     init_gps()
     cam                 = init_camera()
