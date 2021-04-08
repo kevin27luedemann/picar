@@ -67,6 +67,6 @@ def show_gps_time_data(f):
 
 if __name__ == "__main__":
     f           = h5py.File("./20210408.hdf5","r",swmr=True)
-    #animate_timelaps(f)
+    animate_timelaps(f)
     show_gps_time_data(f)
     f.close()
