@@ -182,6 +182,9 @@ if __name__ == "__main__":
     parser.add_option(  "", "--postfix", dest="postfix",
                         default="",
                         help="Specify custom input file postfix")
+    parser.add_option(  "", "--lower_q", dest="lower_q",
+                        action="store_true",default=False,
+                        help="Store images with lower quality")
     parser.add_option(  "-q", "--quiet", dest="quiet",
                         action="store_true",default=False,
                         help="Make script quiet")
@@ -203,7 +206,10 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM,signal_handler)
     #setup is done here
     init_gps()
-    cam                 = init_camera()
+    if options.lower_q:
+        cam                 = init_camera(reso=(1920,1080))
+    else:
+        cam                 = init_camera()
     h5file,d_pic,d_gps  = init_hdf5(fname,cam)
 
     #Run the main loop after the setup is done
