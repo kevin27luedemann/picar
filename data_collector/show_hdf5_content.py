@@ -4,6 +4,7 @@ import matplotlib as mt
 import matplotlib.pyplot as plt
 import animation as an
 import datetime as dt
+from optparse import OptionParser
 
 def ti_to_dt(ti):
     return dt.datetime(2000,1,1)+dt.timedelta(seconds=ti)
@@ -66,7 +67,13 @@ def show_gps_time_data(f):
     plt.show()
 
 if __name__ == "__main__":
-    f           = h5py.File("./20210408.hdf5","r",swmr=True)
+    parser = OptionParser()
+
+    parser.add_option(  "-f", "--file", dest="file",default="demo.hdf5",
+                        help="Specify input file name")
+
+    (options, args) = parser.parse_args()
+    f           = h5py.File(options.file,"r",swmr=True)
     animate_timelaps(f)
     show_gps_time_data(f)
     f.close()
