@@ -9,7 +9,7 @@
  User=pi
  Group=pi
  Restart=always
- ExecStart=/usr/bin/python3 /home/pi/Documents/picar/data_collector/collector.py --praefix /home/pi/data/ -q
+ ExecStart=/usr/bin/python3 /home/pi/Documents/picar/data_collector/collector.py --praefix /home/pi/data/ -q --lower_q
 
  [Install]
  WantedBy=multi-user.target
