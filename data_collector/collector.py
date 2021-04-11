@@ -96,7 +96,9 @@ def write_dset(arr,dset):
 
 def take_picture(camera):
     output      = array.PiYUVArray(camera)
-    camera.capture(output, format='yuv')
+    camera.capture(output, format='yuv', use_video_port=True)
+    #output      = array.PiYUVArray(camera,size=(1920,1080))
+    #camera.capture(output, format='yuv', use_video_port=True,resize=(1920,1080))
     return output.array[:,:,0]
 
 def collect_gps_data():
@@ -207,7 +209,7 @@ if __name__ == "__main__":
     #setup is done here
     init_gps()
     if options.lower_q:
-        cam                 = init_camera(reso=(1920,1080))
+        cam                 = init_camera(reso=(1640,1232))
     else:
         cam                 = init_camera()
     h5file,d_pic,d_gps  = init_hdf5(fname,cam)
