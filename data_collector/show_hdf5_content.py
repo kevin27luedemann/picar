@@ -42,19 +42,19 @@ def show_gps_time_data(f):
     dtis    = [ti_to_dt(igps[0]) for igps in d_GPS[:,:]]
     dtis    = np.array(dtis)
 
-    fig,ax  = plt.subplots(3,sharex=True)
-
+    #fig,ax  = plt.subplots(3,sharex=True)
     #Ther is something wrong with the erorr form GPSD
     #ax[0].errorbar(dtis,d_GPS[:,1],yerr=d_GPS[:,8])
     #ax[1].errorbar(dtis,d_GPS[:,2],yerr=d_GPS[:,9])
     #ax[2].errorbar(dtis,d_GPS[:,3],yerr=d_GPS[:,10])
-    ax[0].plot(dtis,d_GPS[:,1],"r+-")
-    ax[1].plot(dtis,d_GPS[:,2],"r+-")
-    ax[2].plot(dtis,d_GPS[:,3],"r+-")
-    
-    ax[0].set_ylabel("Latitude")
-    ax[1].set_ylabel("Longitude")
-    ax[2].set_ylabel("Speed/ m s^-1")
+    #ax[0].plot(dtis,d_GPS[:,1],"r+-")
+    #ax[1].plot(dtis,d_GPS[:,2],"r+-")
+    #ax[0].set_ylabel("Latitude")
+    #ax[1].set_ylabel("Longitude")
+    fig,ax  = plt.subplots()
+
+    ax.plot(dtis,d_GPS[:,3]*3.6,"r+-")
+    ax.set_ylabel("Speed/ km h^-1")
 
     fig.autofmt_xdate()
 
@@ -74,6 +74,6 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
     f           = h5py.File(options.file,"r",swmr=True)
-    animate_timelaps(f)
+    #animate_timelaps(f)
     show_gps_time_data(f)
     f.close()
