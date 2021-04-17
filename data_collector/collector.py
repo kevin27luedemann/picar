@@ -96,7 +96,7 @@ def write_dset(arr,dset):
 
 def write_dset_long(arr,dset):
         dset.resize(dset.len()+len(arr),axis=0)
-        dset[dset.len()-len(arr)]    = arr
+        dset[dset.len()-len(arr):]  = arr
         #for i in range(len(arr)):
         #    dset[dset.len()-(len(arr)-1)]   = arr[i]
 
@@ -135,12 +135,15 @@ def collect_gps_data():
 def time_diff_sec(dti):
     return (dti-dt.datetime(2000,1,1)).total_seconds()
 
-def format_gps_data():
+def format_gps_data(blocking=False):
     ti,da,er    = collect_gps_data()
-    while ti == '':
-        time.sleep(0.01)
-        ti,da,er    = collect_gps_data()
-    dti         = dt.datetime.strptime(ti,"%Y-%m-%dT%H:%M:%S.%fZ")
+    if ti == '' and blocking:
+        while ti == '':
+            time.sleep(0.01)
+            ti,da,er    = collect_gps_data()
+        dti     = dt.datetime.strptime(ti,"%Y-%m-%dT%H:%M:%S.%fZ")
+    else:
+        dti     = dt.datetime.now()
     ti_sec      = time_diff_sec(dti)
     GPS_point   = np.append(da,er,axis=0)
     GPS_point   = np.append(np.array([ti_sec]),GPS_point,axis=0)
@@ -157,34 +160,18 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
     GPS_data        = np.copy(GPS_point[np.newaxis,:])
     GPS_data.resize((60,GPS_data.shape[1]))
     while main_loop:
-        if not(quiet):
-            print("")
-            print(counter)
-
         c_ti    = time.time()
-        if c_ti - l_pic_ti >= wait_time:
-            start           = time.time()
-            PIC             = take_picture(camera)
-            stop1           = time.time()
-            write_dset(PIC,d_pic[0])
-
-            t_sec           = time_diff_sec(dt.datetime.now())
-            write_dset(t_sec,d_pic[1])
-            stop2           = time.time()
-
-            l_pic_ti    = c_ti
-            if not(quiet):
-                print("Pic: {}".format(stop1-start))
-                print("Wri: {}".format(stop2-stop1))
-                print("All: {}".format(stop2-start))
 
         if c_ti - l_data_ti >= 1.:
+            if not(quiet):
+                print(counter)
+
             start           = time.time()
             GPS_data[counter-l_count] = format_gps_data()
             stop1           = time.time()
 
             #only save the GPS data once every minute
-            if counter-l_count == 60:
+            if counter-l_count >= 59:
                 write_dset_long(GPS_data,d_gps)
                 l_count     = counter
             stop2           = time.time()
@@ -193,10 +180,24 @@ def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
             if not(quiet):
                 print("GPS: {}".format(stop1-start))
                 print("Wri: {}".format(stop2-stop1))
-                print("All: {}".format(stop2-start))
+            counter += 1
+
+        if c_ti - l_pic_ti >= wait_time:
+            start           = time.time()
+            PIC             = take_picture(camera)
+            t_sec           = time_diff_sec(dt.datetime.now())
+
+            stop1           = time.time()
+            write_dset(PIC,d_pic[0])
+            write_dset(t_sec,d_pic[1])
+            stop2           = time.time()
+
+            l_pic_ti    = c_ti
+            if not(quiet):
+                print("Pic: {}".format(stop1-start))
+                print("Wri: {}".format(stop2-stop1))
 
         time.sleep(0.1)
-        counter += 1
     
 if __name__ == "__main__":
     parser = OptionParser()
