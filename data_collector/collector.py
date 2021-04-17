@@ -94,6 +94,12 @@ def write_dset(arr,dset):
         dset.resize(dset.len()+1,axis=0)
         dset[dset.len()-1]    = arr
 
+def write_dset_long(arr,dset):
+        dset.resize(dset.len()+len(arr),axis=0)
+        dset[dset.len()-len(arr)]    = arr
+        #for i in range(len(arr)):
+        #    dset[dset.len()-(len(arr)-1)]   = arr[i]
+
 def take_picture(camera):
     output      = array.PiYUVArray(camera)
     camera.capture(output, format='yuv', use_video_port=True)
@@ -142,37 +148,54 @@ def format_gps_data():
 
 def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
     global main_loop
+    l_count         = 0
     counter         = 0
     l_pic_ti        = 0.
+    l_data_ti       = 0.
+    #create a new object to store 60 seconds of GPS data
+    GPS_point       = format_gps_data()
+    GPS_data        = np.copy(GPS_point[np.newaxis,:])
+    GPS_data.resize((60,GPS_data.shape[1]))
     while main_loop:
         if not(quiet):
+            print("")
             print(counter)
-        c_pic_ti    = time.time()
-        if c_pic_ti - l_pic_ti >= wait_time:
-            start       = time.time()
-            PIC         = take_picture(camera)
-            stop1       = time.time()
+
+        c_ti    = time.time()
+        if c_ti - l_pic_ti >= wait_time:
+            start           = time.time()
+            PIC             = take_picture(camera)
+            stop1           = time.time()
             write_dset(PIC,d_pic[0])
-            t_sec       = time_diff_sec(dt.datetime.now())
+
+            t_sec           = time_diff_sec(dt.datetime.now())
             write_dset(t_sec,d_pic[1])
-            stop2       = time.time()
+            stop2           = time.time()
+
+            l_pic_ti    = c_ti
             if not(quiet):
                 print("Pic: {}".format(stop1-start))
                 print("Wri: {}".format(stop2-stop1))
                 print("All: {}".format(stop2-start))
-            l_pic_ti    = c_pic_ti
 
-        start       = time.time()
-        GPS_point   = format_gps_data()
-        stop1       = time.time()
-        write_dset(GPS_point,d_gps)
-        stop2       = time.time()
-        if not(quiet):
-            print("GPS: {}".format(stop1-start))
-            print("Wri: {}".format(stop2-stop1))
-            print("All: {}".format(stop2-start))
+        if c_ti - l_data_ti >= 1.:
+            start           = time.time()
+            GPS_data[counter-l_count] = format_gps_data()
+            stop1           = time.time()
 
-        time.sleep(1)
+            #only save the GPS data once every minute
+            if counter-l_count == 60:
+                write_dset_long(GPS_data,d_gps)
+                l_count     = counter
+            stop2           = time.time()
+
+            l_data_ti   = c_ti
+            if not(quiet):
+                print("GPS: {}".format(stop1-start))
+                print("Wri: {}".format(stop2-stop1))
+                print("All: {}".format(stop2-start))
+
+        time.sleep(0.1)
         counter += 1
     
 if __name__ == "__main__":
