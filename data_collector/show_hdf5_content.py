@@ -72,8 +72,13 @@ if __name__ == "__main__":
     parser.add_option(  "-f", "--file", dest="file",default="demo.hdf5",
                         help="Specify input file name")
 
+    parser.add_option(  "-a", "--animate", dest="animate",
+                        action="store_true",default=False,
+                        help="Specify input file name")
+
     (options, args) = parser.parse_args()
     f           = h5py.File(options.file,"r",swmr=True)
-    #animate_timelaps(f)
+    if options.animate:
+        animate_timelaps(f)
     show_gps_time_data(f)
     f.close()
