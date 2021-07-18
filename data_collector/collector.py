@@ -215,7 +215,7 @@ def loop(   camera,
 
                     if spee <= 5.0:
                         mclass.threshold              = 15
-                        mclass.num_blocks             = 2
+                        mclass.num_blocks             = 1
                     else:
                         mclass.threshold              = 80
                         mclass.num_blocks             = 7
@@ -266,7 +266,7 @@ def loop(   camera,
 
             if spee <= 5.0:
                 mclass.threshold              = 15
-                mclass.num_blocks             = 2
+                mclass.num_blocks             = 1
             else:
                 mclass.threshold              = 80
                 mclass.num_blocks             = 7
@@ -303,7 +303,8 @@ def create_mask(camera,loglevel=1,praefix=""):
     camera.stop_preview()
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT,  signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     parser = OptionParser()
 
