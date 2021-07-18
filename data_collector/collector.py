@@ -13,11 +13,55 @@ from picamera import PiCameraCircularIO as circular
 from optparse import OptionParser
 
 #Variable to keep main loop running until SIGINT
-main_loop       = True
+motion_detected     = False
+keep_running        = True
 #Handle the SIGINT interrupt
 def signal_handler(signum, frame):
-    global main_loop
-    main_loop   = False
+    global keep_running
+    keep_running    = False
+
+class MotionDetec(array.PiMotionAnalysis):
+    def __init__(self,  camera,size=None,
+                        threshold=80,
+                        num_blocks=7,
+                        num_no_motion_frames=30,
+                        local_motion_mask=np.ones((40,30))):
+        super().__init__(camera,size)
+        self.no_motion_frames       = 0
+        self.threshold              = threshold
+        self.num_blocks             = num_blocks
+        self.num_no_motion_frames   = num_no_motion_frames
+        self.motion_mask            = np.transpose(local_motion_mask)
+        self.motion_mask            = np.pad(   self.motion_mask,
+                                                ((0,0),(0,1)),
+                                                mode="constant",
+                                                constant_values=0)
+        
+    def analyse(self, a):
+        global motion_detected
+        a = np.sqrt(np.square(a['x'].astype(float)) +
+                    np.square(a['y'].astype(float)))
+
+        a = a*self.motion_mask
+
+        if      not(motion_detected)    and \
+                (a > self.threshold).sum() > self.num_blocks:
+            motion_detected         = True
+            self.no_motion_frames   = 0
+
+        elif    motion_detected         and \
+                (a > self.threshold).sum() > self.num_blocks:
+            self.no_motion_frames   = 0
+
+        elif    motion_detected         and \
+                (a > self.threshold).sum() <= self.num_blocks     and \
+                self.no_motion_frames <= self.num_no_motion_frames:
+            self.no_motion_frames  += 1
+
+        elif    motion_detected         and \
+                self.no_motion_frames > self.num_no_motion_frames:
+            motion_detected         = False
+            self.no_motion_frames   = 0
 
 def init_gps():
     # Connect to the local gpsd
@@ -25,80 +69,29 @@ def init_gps():
     #dummy read which is needed at the beginning for some reason
     collect_gps_data()
 
-def init_hdf5(fname,camera):
-    f               = h5py.File(fname,"a",libver="latest")
-    f.swmr_mode     = True
-    #only save the Y value of YUV
-    if not("/timelaps" in f):
-        dummy       = take_picture(camera)
-        d_pic       = f.create_dataset( "timelaps",
-                                        dtype="u1",
-                                        data=[dummy],
-                                        compression="lzf",
-                                        maxshape=(  None,
-                                                    dummy.shape[0],
-                                                    dummy.shape[1]),
-                                        chunks=True)
-        #rewind to zero position
-        d_pic.resize(0,axis=0)
-
-        #Create dset for time data of pictures
-        t_sec       = time_diff_sec(dt.datetime.now())
-        d_pti       = f.create_dataset( "timelaps_ti",
-                                        data=[[t_sec]],
-                                        compression="lzf",
-                                        maxshape=(None,1),
-                                        chunks=True)
-        #rewind to zero position
-        d_pti.resize(0,axis=0)
-    else:
-        d_pic       = f["/timelaps"]
-        d_pti       = f["/timelaps_ti"]
-
-
-    if not("/GPS" in f):
-        dummy       = format_gps_data()
-        d_gps       = f.create_dataset( "GPS",
-                                        data=[dummy],
-                                        compression="lzf",
-                                        maxshape=(  None,
-                                                    dummy.shape[0]),
-                                        chunks=True)
-        d_gps.resize(0,axis=0)
-    else:
-        d_gps       = f["/GPS"]
-    return f,[d_pic,d_pti],d_gps
-
-#alternatives are
-#reso         = (3280,2464) #largest possible resolution (full view) of v2
-#reso         = (2592, 1944)#largest possible resolution (full view) of v1
-#reso         = (1920, 1080)
-#reso         = (640,480)
-#framerate    = 30
-#framerate    = 15
-def init_camera(reso=(3280,2464),framerate=10):
+def init_camera(reso=(3280,2464),framerate=30,loglevel=2):
     camera = PiCamera()
-    camera.resolution   = reso
+    if camera.revision == "imx219":
+        camera.resolution   = (1640,1232) 
+    else:
+        camera.resolution   = (1296,972) 
+    camera.framerate    = framerate
     #Do not set the framerate for images
     #camera.framerate    = framerate
 
     #start warm up befor recording to get exposure right
+    #start warmup befor recording to get exposure right
+    if loglevel == 0:
+        print("Starting warmup")
     camera.start_preview()
     time.sleep(2)
+    if loglevel == 0:
+        print("Done with warmup")
+
     return camera
 
 def dinit_camera(camera):
     camera.stop_preview()
-
-def write_dset(arr,dset):
-        dset.resize(dset.len()+1,axis=0)
-        dset[dset.len()-1]    = arr
-
-def write_dset_long(arr,dset):
-        dset.resize(dset.len()+len(arr),axis=0)
-        dset[dset.len()-len(arr):]  = arr
-        #for i in range(len(arr)):
-        #    dset[dset.len()-(len(arr)-1)]   = arr[i]
 
 def take_picture(camera):
     output      = array.PiYUVArray(camera)
@@ -149,99 +142,210 @@ def format_gps_data(blocking=False):
     GPS_point   = np.append(np.array([ti_sec]),GPS_point,axis=0)
     return GPS_point
 
-def main(camera,h5file,d_pic,d_gps,wait_time=10,quiet=False):
-    global main_loop
-    l_count         = 0
-    counter         = 0
-    l_pic_ti        = 0.
+def loop(   camera,
+            fname_data,
+            praefix="",
+            loglevel=1,
+            concat=False,
+            buffer_time=300,
+            motion_mask=np.ones((40,30))):
+
+    global motion_detected
+    global keep_running
+
+    #setting up GPS buffer
     l_data_ti       = 0.
-    #create a new object to store 60 seconds of GPS data
     GPS_point       = format_gps_data()
-    GPS_data        = np.copy(GPS_point[np.newaxis,:])
-    GPS_data.resize((60,GPS_data.shape[1]))
-    while main_loop:
+    speed           = np.ones(30)
+    counter         = 0
+    fi              = open(fname_data,"a")
+
+    #Use circular io buffor
+    if loglevel == 0:
+        print("Create 10 seconds circular io buffer and start recording h264")
+    stream              = circular(camera, seconds=buffer_time)
+    camera.start_recording(stream, format="h264")
+
+    #Perform motion analysis from second splitter port with lowest resolution.
+    #Reson is performance and enhanced noise removal
+    if loglevel == 0:
+        print("Set up motion detection on 640x480 resolution")
+    mclass = MotionDetec(   camera,
+                            size=(640,480),
+                            num_no_motion_frames=camera.framerate*5,
+                            local_motion_mask=motion_mask)
+
+    camera.start_recording('/dev/null', format='h264',
+                            splitter_port=2, resize=(640,480),
+                            motion_output=mclass)
+    
+    #Do some stuff while motion is not detected and wait
+    #start   = dt.now()
+    #while dt.now()-start < tidt(seconds=30.):
+    while keep_running:
+        if loglevel == 0:
+            print("Waiting for motion")
+            print("thresh={}, num_blocks={}".format(mclass.threshold,
+                                                    mclass.num_blocks))
+
+        camera.wait_recording(0.5)
+        if motion_detected:
+            fname   = "{}{}".format(praefix,dt.strftime(dt.now(),"%Y%m%d_%H%M%S"))
+            if loglevel < 2:
+                print("Motion at: {}".format(fname.split("/")[-1]))
+            camera.split_recording("{}_during.mp4".format(fname),splitter_port=1)
+            stream.copy_to("{}_before.mp4".format(fname),seconds=buffer_time)
+            stream.clear()
+            while motion_detected:
+                camera.wait_recording(0.5)
+                #Handle GPS data once every second
+                c_ti    = time.time()
+                if c_ti - l_data_ti >= 1.:
+                    if loglevel == 0:
+                        print("counter={}".format(counter))
+                    GPS_point       = format_gps_data()
+                    #Speed in km/h
+                    speed[counter]  = GPS_point[3]*3.6
+                    spee        = np.mean(speed)
+                    if loglevel == 0:
+                        print("speed={}".format(spee))
+
+                    if spee <= 5.0:
+                        mclass.threshold              = 20
+                        mclass.num_blocks             = 2
+                    else:
+                        mclass.threshold              = 80
+                        mclass.num_blocks             = 7
+
+                    out = ""
+                    for da in GPS_point:
+                        out += "{}\t".format(da)
+                    out += "\n"
+                    if loglevel == 0:
+                        print(out)
+                    fi.write(out)
+
+                    l_data_ti   = c_ti
+                    counter    += 1
+                    counter    %= 30
+            if loglevel == 0:
+                print("Motion done, splitting back to circular io")
+            camera.split_recording(stream,splitter_port=1)
+
+            command = "ffmpeg -f concat -safe 0 -i {}_cat.txt -c copy {}.mp4 1> /dev/null 2> /dev/null && ".format(fname,fname)
+            command += "rm -f {}_before.mp4 && ".format(fname)
+            command += "rm -f {}_during.mp4 && ".format(fname)
+            command += "rm -f {}_cat.txt &".format(fname)
+            if loglevel == 0:
+                print(command)
+            with open("{}_cat.txt".format(fname),"w") as fi:
+                fi.write("file '{}_before.mp4'\n".format(fname))
+                fi.write("file '{}_during.mp4'\n".format(fname))
+                fi.write("#{}".format(command))
+            #Only run this line if you have enough CPU grunt
+            if concat:
+                if loglevel == 0:
+                    print("Running ffmpeg command")
+                os.system(command)
+
+        #Handle GPS data once every second
         c_ti    = time.time()
-
         if c_ti - l_data_ti >= 1.:
-            if not(quiet):
-                print(counter)
+            if loglevel == 0:
+                print("counter={}".format(counter))
+            GPS_point       = format_gps_data()
+            #Speed in km/h
+            speed[counter]  = GPS_point[3]*3.6
+            spee        = np.mean(speed)
+            if loglevel == 0:
+                print("speed={}".format(spee))
 
-            start           = time.time()
-            GPS_data[counter-l_count] = format_gps_data()
-            stop1           = time.time()
+            if spee <= 5.0:
+                mclass.threshold              = 20
+                mclass.num_blocks             = 2
+            else:
+                mclass.threshold              = 80
+                mclass.num_blocks             = 7
 
-            #only save the GPS data once every minute
-            if counter-l_count >= 59:
-                write_dset_long(GPS_data,d_gps)
-                l_count     = counter
-            stop2           = time.time()
+            out = ""
+            for da in GPS_point:
+                out += "{}\t".format(da)
+            out += "\n"
+            if loglevel == 0:
+                print(out)
+            fi.write(out)
 
             l_data_ti   = c_ti
-            if not(quiet):
-                print("GPS: {}".format(stop1-start))
-                print("Wri: {}".format(stop2-stop1))
-            counter += 1
+            counter    += 1
+            counter    %= 30
 
-        if c_ti - l_pic_ti >= wait_time:
-            start           = time.time()
-            PIC             = take_picture(camera)
-            t_sec           = time_diff_sec(dt.datetime.now())
+    fi.close()
 
-            stop1           = time.time()
-            write_dset(PIC,d_pic[0])
-            write_dset(t_sec,d_pic[1])
-            stop2           = time.time()
+def create_mask(camera,loglevel=1,praefix=""):
+    if loglevel == 0:
+        print("Some image will be taken")
 
-            l_pic_ti    = c_ti
-            if not(quiet):
-                print("Pic: {}".format(stop1-start))
-                print("Wri: {}".format(stop2-stop1))
+    fname   = praefix+"mask_image"
 
-        time.sleep(0.1)
-    
+    if loglevel == 0:
+        print("Capture image")
+    camera.capture(fname+".png")
+
+    if loglevel == 0:
+        print("Taking second image with 640 by 480")
+    camera.capture(fname+"640_480.png",resize=(640,480))
+
+    camera.stop_preview()
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = OptionParser()
 
-    parser.add_option(  "-f", "--praefix", dest="praefix",
-                        default="",
-                        help="Specify custom input file praefix")
+    parser.add_option(  "-f", "--praefix", dest="praefix",default="",
+                        help="File praefix and folder localtion")
     parser.add_option(  "", "--postfix", dest="postfix",
                         default="",
                         help="Specify custom input file postfix")
-    parser.add_option(  "", "--lower_q", dest="lower_q",
+    parser.add_option(  "-m", "--mask", dest="mask",default="",
+                        help="Filename for the mask image")
+    parser.add_option(  "-v", "--loglevel", dest="loglevel",default=1,
+                        help="Loglevel: 0:verbose, 1:moderate, 2:quiet")
+    parser.add_option(  "-c", "--concat", dest="concat",
                         action="store_true",default=False,
-                        help="Store images with lower quality")
-    parser.add_option(  "-q", "--quiet", dest="quiet",
+                        help="Concat before and during video and delete both")
+    parser.add_option(  "", "--create_mask", dest="create_mask",
                         action="store_true",default=False,
-                        help="Make script quiet")
-    parser.add_option(  "-t", "--timedelay", dest="timedelay",
-                        default=10,
-                        help="Specify waiting time for timelaps in seconds")
+                        help="Take an image for the creation of motion mask")
 
     (options, args) = parser.parse_args()
 
     fname               = dt.datetime.strftime( dt.datetime.now(),"%Y%m%d")
     fname               = fname + options.postfix
-    fname               = fname + ".hdf5"
+    fname               = fname + ".txt"
     fname               = options.praefix + fname
 
-    if not(options.quiet):
+    if options.loglevel == 0:
         print(fname)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM,signal_handler)
-    #setup is done here
     init_gps()
-    if options.lower_q:
-        cam                 = init_camera(reso=(1640,1232))
+    cam                 = init_camera(loglevel=int(options.loglevel))
+
+    if options.create_mask:
+        create_mask(    cam,
+                        loglevel=int(options.loglevel),
+                        praefix=options.praefix)
     else:
-        cam                 = init_camera()
-    h5file,d_pic,d_gps  = init_hdf5(fname,cam)
+        if options.mask != "":
+            img         = Image.open(options.mask).convert('LA').resize((40,30))
+            mask        = np.array(img.getdata())[:,0].reshape((40,30))
+            mask[mask>0]= 1.0
+        else:
+            mask        = np.ones((40,30))
 
-    #Run the main loop after the setup is done
-    main(cam,h5file,d_pic,d_gps,wait_time=options.timedelay,quiet=options.quiet)
-    #Stop camera after all is done
-
-    dinit_camera(cam)
-    h5file.close()
-
+        loop(   cam,
+                fname,
+                praefix=options.praefix,
+                loglevel=int(options.loglevel),
+                concat=options.concat,
+                motion_mask=mask)
