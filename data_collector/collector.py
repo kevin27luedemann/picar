@@ -7,10 +7,13 @@ import h5py
 import time
 import signal,os,sys
 import datetime as dt
+from datetime import timedelta as tidt
+from io import BytesIO
 from picamera import PiCamera
 from picamera import array
 from picamera import PiCameraCircularIO as circular
 from optparse import OptionParser
+from PIL import Image
 
 #Variable to keep main loop running until SIGINT
 motion_detected     = False
@@ -211,7 +214,7 @@ def loop(   camera,
                         print("speed={}".format(spee))
 
                     if spee <= 5.0:
-                        mclass.threshold              = 20
+                        mclass.threshold              = 15
                         mclass.num_blocks             = 2
                     else:
                         mclass.threshold              = 80
@@ -224,6 +227,7 @@ def loop(   camera,
                     if loglevel == 0:
                         print(out)
                     fi.write(out)
+                    fi.flush()
 
                     l_data_ti   = c_ti
                     counter    += 1
@@ -261,7 +265,7 @@ def loop(   camera,
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 20
+                mclass.threshold              = 15
                 mclass.num_blocks             = 2
             else:
                 mclass.threshold              = 80
@@ -274,6 +278,7 @@ def loop(   camera,
             if loglevel == 0:
                 print(out)
             fi.write(out)
+            fi.flush()
 
             l_data_ti   = c_ti
             counter    += 1
