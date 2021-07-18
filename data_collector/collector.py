@@ -285,6 +285,8 @@ def loop(   camera,
             counter    %= 30
 
     fi.close()
+    camera.stop_recording(splitter_port=2)
+    camera.stop_recording()
 
 def create_mask(camera,loglevel=1,praefix=""):
     if loglevel == 0:
@@ -355,3 +357,4 @@ if __name__ == "__main__":
                 loglevel=int(options.loglevel),
                 concat=options.concat,
                 motion_mask=mask)
+    dinit_camera(cam)
