@@ -161,7 +161,7 @@ def loop(   camera,
     GPS_point       = format_gps_data()
     speed           = np.ones(30)
     counter         = 0
-    fi              = open(fname_data,"a")
+    fi_data         = open(fname_data,"a")
 
     #Use circular io buffor
     if loglevel == 0:
@@ -193,7 +193,7 @@ def loop(   camera,
 
         camera.wait_recording(0.5)
         if motion_detected:
-            fname   = "{}{}".format(praefix,dt.strftime(dt.now(),"%Y%m%d_%H%M%S"))
+            fname   = "{}{}".format(praefix,dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S"))
             if loglevel < 2:
                 print("Motion at: {}".format(fname.split("/")[-1]))
             camera.split_recording("{}_during.mp4".format(fname),splitter_port=1)
@@ -226,8 +226,8 @@ def loop(   camera,
                     out += "\n"
                     if loglevel == 0:
                         print(out)
-                    fi.write(out)
-                    fi.flush()
+                    fi_data.write(out)
+                    fi_data.flush()
 
                     l_data_ti   = c_ti
                     counter    += 1
@@ -277,14 +277,14 @@ def loop(   camera,
             out += "\n"
             if loglevel == 0:
                 print(out)
-            fi.write(out)
-            fi.flush()
+            fi_data.write(out)
+            fi_data.flush()
 
             l_data_ti   = c_ti
             counter    += 1
             counter    %= 30
 
-    fi.close()
+    fi_data.close()
     camera.stop_recording(splitter_port=2)
     camera.stop_recording()
 
