@@ -15,6 +15,8 @@ from picamera import PiCameraCircularIO as circular
 from optparse import OptionParser
 from PIL import Image
 
+np.set_printoptions(threshold=sys.maxsize)
+
 #Variable to keep main loop running until SIGINT
 motion_detected     = False
 keep_running        = True
@@ -150,7 +152,7 @@ def loop(   camera,
             praefix="",
             loglevel=1,
             concat=False,
-            buffer_time=300,
+            buffer_time=120,
             motion_mask=np.ones((40,30))):
 
     global motion_detected
@@ -214,8 +216,8 @@ def loop(   camera,
                         print("speed={}".format(spee))
 
                     if spee <= 5.0:
-                        mclass.threshold              = 15
-                        mclass.num_blocks             = 1
+                        mclass.threshold              = 20
+                        mclass.num_blocks             = 2
                     else:
                         mclass.threshold              = 80
                         mclass.num_blocks             = 7
@@ -265,8 +267,8 @@ def loop(   camera,
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 15
-                mclass.num_blocks             = 1
+                mclass.threshold              = 20
+                mclass.num_blocks             = 2
             else:
                 mclass.threshold              = 80
                 mclass.num_blocks             = 7
@@ -346,8 +348,12 @@ if __name__ == "__main__":
     else:
         if options.mask != "":
             img         = Image.open(options.mask).convert('LA').resize((40,30))
+            img.save("mask_new.png")
             mask        = np.array(img.getdata())[:,0].reshape((40,30))
+            mask        = np.flip(mask)
+            #print(mask.shape)
             mask[mask>0]= 1.0
+            #print(mask)
         else:
             mask        = np.ones((40,30))
 
