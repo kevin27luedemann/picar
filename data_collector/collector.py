@@ -15,6 +15,10 @@ from picamera import PiCameraCircularIO as circular
 from optparse import OptionParser
 from PIL import Image
 
+#Add sensor to path
+sys.path.append("../sense_hat/")
+import ICM20948 as sense
+
 np.set_printoptions(threshold=sys.maxsize)
 
 #Variable to keep main loop running until SIGINT
@@ -149,6 +153,7 @@ def format_gps_data(blocking=False):
 
 def loop(   camera,
             fname_data,
+            sensor,
             praefix="",
             loglevel=1,
             concat=False,
@@ -203,7 +208,7 @@ def loop(   camera,
             stream.clear()
             while motion_detected:
                 camera.wait_recording(0.5)
-                #Handle GPS data once every second
+                #Handle GPS and sensor data once every second
                 c_ti    = time.time()
                 if c_ti - l_data_ti >= 1.:
                     if loglevel == 0:
@@ -225,6 +230,13 @@ def loop(   camera,
                     out = ""
                     for da in GPS_point:
                         out += "{}\t".format(da)
+
+                    sensor.icm20948_Gyro_Accel_Read()
+                    gs      = np.copy(sense.Accel)/16384
+
+                    for g in gs:
+                        out += "{}\t".format(g)
+
                     out += "\n"
                     if loglevel == 0:
                         print(out)
@@ -276,7 +288,15 @@ def loop(   camera,
             out = ""
             for da in GPS_point:
                 out += "{}\t".format(da)
+
+            sensor.icm20948_Gyro_Accel_Read()
+            gs      = np.copy(sense.Accel)/16384
+
+            for g in gs:
+                out += "{}\t".format(g)
+
             out += "\n"
+
             if loglevel == 0:
                 print(out)
             fi_data.write(out)
@@ -338,6 +358,7 @@ if __name__ == "__main__":
     if options.loglevel == 0:
         print(fname)
 
+    sensor              = sense.ICM20948()
     init_gps()
     cam                 = init_camera(loglevel=int(options.loglevel))
 
@@ -359,6 +380,7 @@ if __name__ == "__main__":
 
         loop(   cam,
                 fname,
+                sensor,
                 praefix=options.praefix,
                 loglevel=int(options.loglevel),
                 concat=options.concat,
