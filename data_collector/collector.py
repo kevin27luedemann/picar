@@ -16,7 +16,7 @@ from optparse import OptionParser
 from PIL import Image
 
 #Add sensor to path
-sys.path.append("../sense_hat/")
+sys.path.append("/home/pi/Documents/picar/sense_hat/")
 import ICM20948 as sense
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -221,8 +221,8 @@ def loop(   camera,
                         print("speed={}".format(spee))
 
                     if spee <= 5.0:
-                        mclass.threshold              = 20
-                        mclass.num_blocks             = 2
+                        mclass.threshold              = 25
+                        mclass.num_blocks             = 3
                     else:
                         mclass.threshold              = 80
                         mclass.num_blocks             = 7
@@ -279,8 +279,8 @@ def loop(   camera,
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 20
-                mclass.num_blocks             = 2
+                mclass.threshold              = 25
+                mclass.num_blocks             = 3
             else:
                 mclass.threshold              = 80
                 mclass.num_blocks             = 7
