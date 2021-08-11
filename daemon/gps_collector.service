@@ -1,0 +1,13 @@
+ [Unit]
+ Description=GPS collector service
+ After=multi-user.target
+
+ [Service]
+ Type=idle
+ User=pi
+ Group=pi
+ Restart=always
+ ExecStart=/usr/bin/python3 /home/pi/Documents/picar/data_collector/gps_data.py --loglevel 2
+
+ [Install]
+ WantedBy=multi-user.target

@@ -115,7 +115,10 @@ def loop(   camera,
     global keep_running
 
     #setting up GPS buffer
+    l_data_ti       = 0.
     speed           = np.ones(30)
+    counter         = 0
+    fi_data         = open(fname_data,"a")
 
     #Use circular io buffor
     if loglevel == 0:
@@ -175,6 +178,27 @@ def loop(   camera,
                 if loglevel == 0:
                     print("Running ffmpeg command")
                 os.system(command)
+
+        #Handle GPS data once every second
+        c_ti    = time.time()
+        if c_ti - l_data_ti >= 1.:
+            if loglevel == 0:
+                print("counter={}".format(counter))
+            #Speed in km/h
+            spee        = np.mean(speed)
+            if loglevel == 0:
+                print("speed={}".format(spee))
+
+            if spee <= 5.0:
+                mclass.threshold              = 25
+                mclass.num_blocks             = 3
+            else:
+                mclass.threshold              = 80
+                mclass.num_blocks             = 7
+
+            l_data_ti   = c_ti
+            counter    += 1
+            counter    %= 30
 
     camera.stop_recording(splitter_port=2)
     camera.stop_recording()
