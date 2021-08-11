@@ -114,7 +114,6 @@ def loop(   camera,
     l_data_ti       = 0.
     speed           = np.ones(30)
     counter         = 0
-    fi_data         = open(fname_data,"a")
 
     #Use circular io buffor
     if loglevel == 0:
@@ -181,12 +180,18 @@ def loop(   camera,
             if loglevel == 0:
                 print("counter={}".format(counter))
             #Speed in km/h
-            spee        = np.mean(speed)
+            with open("/tmp/gps.data","r") as dafi:
+                gps_point   = dafi.readline()
+            gps_point   = gps_point.split("\t")
+            if loglevel == 0:
+                print(gps_point)
+
+            spee        = float(gps_point[-1])
             if loglevel == 0:
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 25
+                mclass.threshold              = 35
                 mclass.num_blocks             = 3
             else:
                 mclass.threshold              = 80
