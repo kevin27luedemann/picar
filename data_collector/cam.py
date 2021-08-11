@@ -15,10 +15,6 @@ from picamera import PiCameraCircularIO as circular
 from optparse import OptionParser
 from PIL import Image
 
-#Add sensor to path
-sys.path.append("/home/pi/Documents/picar/sense_hat/")
-import ICM20948 as sense
-
 np.set_printoptions(threshold=sys.maxsize)
 
 #Variable to keep main loop running until SIGINT
