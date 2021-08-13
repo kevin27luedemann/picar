@@ -105,7 +105,8 @@ def loop(   camera,
             loglevel=1,
             concat=False,
             buffer_time=120,
-            motion_mask=np.ones((40,30))):
+            motion_mask=np.ones((40,30)),
+            motion_mask_st=np.ones((40,30))):
 
     global motion_detected
     global keep_running
@@ -191,11 +192,13 @@ def loop(   camera,
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 35
+                mclass.threshold              = 15
                 mclass.num_blocks             = 3
+                mclass.motion_mask            = motion_mask_st
             else:
                 mclass.threshold              = 80
-                mclass.num_blocks             = 7
+                mclass.num_blocks             = 5
+                mclass.motion_mask            = motion_mask
 
             l_data_ti   = c_ti
             counter    += 1
@@ -233,6 +236,8 @@ if __name__ == "__main__":
                         help="Specify custom input file postfix")
     parser.add_option(  "-m", "--mask", dest="mask",default="",
                         help="Filename for the mask image")
+    parser.add_option(  "", "--mask_standing", dest="mask_standing",default="",
+                        help="Filename for the mask image for standing")
     parser.add_option(  "-v", "--loglevel", dest="loglevel",default=1,
                         help="Loglevel: 0:verbose, 1:moderate, 2:quiet")
     parser.add_option(  "-c", "--concat", dest="concat",
@@ -264,13 +269,22 @@ if __name__ == "__main__":
             mask        = np.array(img.getdata())[:,0].reshape((40,30))
             mask        = np.flip(mask)
             mask[mask>0]= 1.0
+            if options.mask_standing != "":
+                img         = Image.open(options.mask_standing).convert('LA').resize((40,30))
+                mask_st     = np.array(img.getdata())[:,0].reshape((40,30))
+                mask_st     = np.flip(mask)
+                mask_st[mask>0]= 1.0
+            else:
+                mask_st     = np.copy(mask)
         else:
-            mask        = np.ones((40,30))
+            mask            = np.ones((40,30))
+            mask_st         = np.ones((40,30))
 
         loop(   cam,
                 fname,
                 praefix=options.praefix,
                 loglevel=int(options.loglevel),
                 concat=options.concat,
-                motion_mask=mask)
+                motion_mask=mask,
+                motion_mask_st=mask_st)
     dinit_camera(cam)
