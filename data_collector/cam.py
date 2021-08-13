@@ -30,23 +30,41 @@ class MotionDetec(array.PiMotionAnalysis):
                         threshold=80,
                         num_blocks=7,
                         num_no_motion_frames=30,
-                        local_motion_mask=np.ones((40,30))):
+                        local_motion_mask=np.ones((30,40))):
         super().__init__(camera,size)
         self.no_motion_frames       = 0
         self.threshold              = threshold
         self.num_blocks             = num_blocks
         self.num_no_motion_frames   = num_no_motion_frames
-        self.motion_mask            = np.transpose(local_motion_mask)
+        self.set_mask(local_motion_mask)
+
+    def set_mask(self,mask):
+        self.motion_mask            = mask
         self.motion_mask            = np.pad(   self.motion_mask,
                                                 ((0,0),(0,1)),
                                                 mode="constant",
                                                 constant_values=0)
-        
+        #nx,ny                       = self.motion_mask.shape
+        #for i in range(nx):
+        #    for j in range(ny):
+        #        if j == ny-1:
+        #            print("{:.01f}".format(self.motion_mask[i,j]))
+        #        else:
+        #            print("{:.01f}".format(self.motion_mask[i,j]), end='')
+
     def analyse(self, a):
         global motion_detected
         a = np.sqrt(np.square(a['x'].astype(float)) +
                     np.square(a['y'].astype(float)))
 
+        nx,ny                       = a.shape
+        for i in range(nx):
+            for j in range(ny):
+                if j == ny-1:
+                    print("{:.01f}".format(a[i,j]))
+                else:
+                    print("{:.01f}".format(a[i,j]), end='')
+        print()
         a = a*self.motion_mask
 
         if      not(motion_detected)    and \
@@ -105,8 +123,8 @@ def loop(   camera,
             loglevel=1,
             concat=False,
             buffer_time=120,
-            motion_mask=np.ones((40,30)),
-            motion_mask_st=np.ones((40,30))):
+            motion_mask=np.ones((30,40)),
+            motion_mask_st=np.ones((30,40))):
 
     global motion_detected
     global keep_running
@@ -194,11 +212,11 @@ def loop(   camera,
             if spee <= 5.0:
                 mclass.threshold              = 15
                 mclass.num_blocks             = 3
-                mclass.motion_mask            = motion_mask_st
+                mclass.set_mask(motion_mask_st)
             else:
                 mclass.threshold              = 80
-                mclass.num_blocks             = 5
-                mclass.motion_mask            = motion_mask
+                mclass.num_blocks             = 7
+                mclass.set_mask(motion_mask)
 
             l_data_ti   = c_ti
             counter    += 1
@@ -253,38 +271,49 @@ if __name__ == "__main__":
     fname               = fname + options.postfix
     fname               = fname + ".txt"
     fname               = options.praefix + fname
+    loglevel            = int(options.loglevel)
 
-    if options.loglevel == 0:
+    if loglevel == 0:
         print(fname)
 
     cam                 = init_camera(loglevel=int(options.loglevel))
 
     if options.create_mask:
         create_mask(    cam,
-                        loglevel=int(options.loglevel),
+                        loglevel=loglevel,
                         praefix=options.praefix)
     else:
         if options.mask != "":
             img         = Image.open(options.mask).convert('LA').resize((40,30))
-            mask        = np.array(img.getdata())[:,0].reshape((40,30))
-            mask        = np.flip(mask)
+            mask        = np.array(img.getdata())[:,0].reshape((30,40))
+            #mask        = np.flip(mask)
             mask[mask>0]= 1.0
             if options.mask_standing != "":
                 img         = Image.open(options.mask_standing).convert('LA').resize((40,30))
-                mask_st     = np.array(img.getdata())[:,0].reshape((40,30))
-                mask_st     = np.flip(mask)
-                mask_st[mask>0]= 1.0
+                mask_st     = np.array(img.getdata())[:,0].reshape((30,40))
+                #mask_st     = np.flip(mask_st)
+                mask_st[mask_st>0]= 1.0
             else:
                 mask_st     = np.copy(mask)
         else:
-            mask            = np.ones((40,30))
-            mask_st         = np.ones((40,30))
+            mask            = np.ones((30,40))
+            mask_st         = np.ones((30,40))
+
+        if loglevel == 0:
+            print(options.mask)
+            print(np.sum(mask))
+            print(mask.shape)
+
+            print(options.mask_standing)
+            print(np.sum(mask_st))
+            print(mask_st.shape)
 
         loop(   cam,
                 fname,
                 praefix=options.praefix,
-                loglevel=int(options.loglevel),
+                loglevel=loglevel,
                 concat=options.concat,
                 motion_mask=mask,
                 motion_mask_st=mask_st)
+
     dinit_camera(cam)
