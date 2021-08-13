@@ -195,6 +195,7 @@ def loop(   camera,
             stream.copy_to("{}_before.mp4".format(fname),seconds=buffer_time)
             stream.clear()
             while (motion_detected or flags[0]) and keep_running:
+                flags       = read_status_file()
                 camera.wait_recording(0.5)
 
             if loglevel == 0:
