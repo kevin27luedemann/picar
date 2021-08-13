@@ -57,14 +57,14 @@ class MotionDetec(array.PiMotionAnalysis):
         a = np.sqrt(np.square(a['x'].astype(float)) +
                     np.square(a['y'].astype(float)))
 
-        nx,ny                       = a.shape
-        for i in range(nx):
-            for j in range(ny):
-                if j == ny-1:
-                    print("{:.01f}".format(a[i,j]))
-                else:
-                    print("{:.01f}".format(a[i,j]), end='')
-        print()
+        #nx,ny                       = a.shape
+        #for i in range(nx):
+        #    for j in range(ny):
+        #        if j == ny-1:
+        #            print("{:4.01f}".format(a[i,j]))
+        #        else:
+        #            print("{:4.01f}".format(a[i,j]), end='')
+        #print()
         a = a*self.motion_mask
 
         if      not(motion_detected)    and \
@@ -117,6 +117,11 @@ def take_picture(camera):
     #camera.capture(output, format='yuv', use_video_port=True,resize=(1920,1080))
     return output.array[:,:,0]
 
+def read_status_file(name="/tmp/cam_flags"):
+    flags   = np.genfromtxt(name)
+    flags   = flags == 1
+    return flags
+
 def loop(   camera,
             fname_data,
             praefix="",
@@ -146,7 +151,7 @@ def loop(   camera,
         print("Set up motion detection on 640x480 resolution")
     mclass = MotionDetec(   camera,
                             size=(640,480),
-                            num_no_motion_frames=camera.framerate*5,
+                            num_no_motion_frames=camera.framerate*10,
                             local_motion_mask=motion_mask)
 
     camera.start_recording('/dev/null', format='h264',
@@ -157,20 +162,21 @@ def loop(   camera,
     #start   = dt.now()
     #while dt.now()-start < tidt(seconds=30.):
     while keep_running:
+        flags       = read_status_file()
         if loglevel == 0:
             print("Waiting for motion")
             print("thresh={}, num_blocks={}".format(mclass.threshold,
                                                     mclass.num_blocks))
 
-        camera.wait_recording(0.5)
-        if motion_detected:
+        camera.wait_recording(0.2)
+        if motion_detected or flags[0]:
             fname   = "{}{}".format(praefix,dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S"))
             if loglevel < 2:
                 print("Motion at: {}".format(fname.split("/")[-1]))
             camera.split_recording("{}_during.mp4".format(fname),splitter_port=1)
             stream.copy_to("{}_before.mp4".format(fname),seconds=buffer_time)
             stream.clear()
-            while motion_detected:
+            while (motion_detected or flags[0]) and keep_running:
                 camera.wait_recording(0.5)
 
             if loglevel == 0:
@@ -211,7 +217,7 @@ def loop(   camera,
 
             if spee <= 5.0:
                 mclass.threshold              = 15
-                mclass.num_blocks             = 3
+                mclass.num_blocks             = 4
                 mclass.set_mask(motion_mask_st)
             else:
                 mclass.threshold              = 80
@@ -266,6 +272,8 @@ if __name__ == "__main__":
                         help="Take an image for the creation of motion mask")
 
     (options, args) = parser.parse_args()
+    with open("/tmp/cam_flags","w") as fi:
+        fi.write("0\t0\t0")
 
     fname               = dt.datetime.strftime( dt.datetime.now(),"%Y%m%d")
     fname               = fname + options.postfix
@@ -277,6 +285,8 @@ if __name__ == "__main__":
         print(fname)
 
     cam                 = init_camera(loglevel=int(options.loglevel))
+
+    print(read_status_file())
 
     if options.create_mask:
         create_mask(    cam,
