@@ -20,6 +20,8 @@ np.set_printoptions(threshold=sys.maxsize)
 #Variable to keep main loop running until SIGINT
 motion_detected     = False
 keep_running        = True
+debug_file          = None
+debug_flag          = False
 #Handle the SIGINT interrupt
 def signal_handler(signum, frame):
     global keep_running
@@ -58,25 +60,35 @@ class MotionDetec(array.PiMotionAnalysis):
                     np.square(a['y'].astype(float)))
 
         a = a*self.motion_mask
-        #nx,ny                       = a.shape
-        #for i in range(nx):
-        #    for j in range(ny):
-        #        if j == ny-1:
-        #            print("{:4.01f}".format(a[i,j]))
-        #        else:
-        #            print("{:4.01f}".format(a[i,j]), end='')
-        #print()
 
         if      not(motion_detected)    and \
                 (a > self.threshold).sum() > self.num_blocks and \
                 (a > self.threshold).sum() < self.motion_mask.sum()*0.8:
             motion_detected         = True
             self.no_motion_frames   = 0
+            if debug_flag:
+                nx,ny                       = a.shape
+                for i in range(nx):
+                    for j in range(ny):
+                        if j == ny-1:
+                            debug_file.write("{:4.01f}\n".format(a[i,j]))
+                        else:
+                            debug_file.write("{:4.01f}".format(a[i,j]))
+                debug_file.write("\n")
 
         elif    motion_detected         and \
                 (a > self.threshold).sum() > self.num_blocks and \
-                (a > self.threshold).sum() < self.motion_mask.sum()*0.9:
+                (a > self.threshold).sum() < self.motion_mask.sum()*0.8:
             self.no_motion_frames   = 0
+            #if debug_flag:
+            #    nx,ny                       = a.shape
+            #    for i in range(nx):
+            #        for j in range(ny):
+            #            if j == ny-1:
+            #                debug_file.write("{:4.01f}\n".format(a[i,j]))
+            #            else:
+            #                debug_file.write("{:4.01f}".format(a[i,j]))
+            #    debug_file.write("\n")
 
         elif    motion_detected         and \
                 (a > self.threshold).sum() <= self.num_blocks     and \
@@ -189,6 +201,8 @@ def loop(   camera,
         camera.wait_recording(0.2)
         if motion_detected or flags[0]:
             fname   = "{}{}".format(praefix,dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S"))
+            if debug_flag:
+                debug_file.write(fname+"\n")
             if loglevel < 2:
                 print("Motion at: {}".format(fname.split("/")[-1]))
             camera.split_recording("{}_during.mp4".format(fname),splitter_port=1)
@@ -273,6 +287,9 @@ if __name__ == "__main__":
     parser.add_option(  "", "--create_mask", dest="create_mask",
                         action="store_true",default=False,
                         help="Take an image for the creation of motion mask")
+    parser.add_option(  "", "--DEBUG", dest="DEBUG",
+                        action="store_true",default=False,
+                        help="Output motion array to file")
 
     (options, args) = parser.parse_args()
     with open("/tmp/cam_flags","w") as fi:
@@ -290,6 +307,12 @@ if __name__ == "__main__":
 
     cam                 = init_camera(loglevel=int(options.loglevel))
 
+    debug_flag          = options.DEBUG
+    if debug_flag:
+        debug_file      = open("/tmp/debug_cam_motion.txt","w")
+        if loglevel == 0:
+            print("Debug mode active")
+        
 
     if options.create_mask:
         create_mask(    cam,
@@ -330,3 +353,5 @@ if __name__ == "__main__":
                 motion_mask_st=mask_st)
 
     dinit_camera(cam)
+    if debug_flag:
+        debug_file.close()
