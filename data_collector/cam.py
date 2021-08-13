@@ -235,7 +235,7 @@ def loop(   camera,
 
             if spee <= 5.0:
                 mclass.threshold              = 10
-                mclass.num_blocks             = 5
+                mclass.num_blocks             = 6
                 mclass.set_mask(motion_mask_st)
             else:
                 mclass.threshold              = 80
