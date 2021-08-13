@@ -57,6 +57,7 @@ class MotionDetec(array.PiMotionAnalysis):
         a = np.sqrt(np.square(a['x'].astype(float)) +
                     np.square(a['y'].astype(float)))
 
+        a = a*self.motion_mask
         #nx,ny                       = a.shape
         #for i in range(nx):
         #    for j in range(ny):
@@ -65,15 +66,16 @@ class MotionDetec(array.PiMotionAnalysis):
         #        else:
         #            print("{:4.01f}".format(a[i,j]), end='')
         #print()
-        a = a*self.motion_mask
 
         if      not(motion_detected)    and \
-                (a > self.threshold).sum() > self.num_blocks:
+                (a > self.threshold).sum() > self.num_blocks and \
+                (a > self.threshold).sum() < self.motion_mask.sum()*0.8:
             motion_detected         = True
             self.no_motion_frames   = 0
 
         elif    motion_detected         and \
-                (a > self.threshold).sum() > self.num_blocks:
+                (a > self.threshold).sum() > self.num_blocks and \
+                (a > self.threshold).sum() < self.motion_mask.sum()*0.9:
             self.no_motion_frames   = 0
 
         elif    motion_detected         and \
@@ -121,6 +123,22 @@ def read_status_file(name="/tmp/cam_flags"):
     flags   = np.genfromtxt(name)
     flags   = flags == 1
     return flags
+
+def create_mask(camera,loglevel=1,praefix=""):
+    if loglevel == 0:
+        print("Some image will be taken")
+
+    fname   = praefix+"mask_image"
+
+    if loglevel == 0:
+        print("Capture image")
+    camera.capture(fname+".png")
+
+    if loglevel == 0:
+        print("Taking second image with 640 by 480")
+    camera.capture(fname+"640_480.png",resize=(640,480))
+
+    camera.stop_preview()
 
 def loop(   camera,
             fname_data,
@@ -216,8 +234,8 @@ def loop(   camera,
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 15
-                mclass.num_blocks             = 4
+                mclass.threshold              = 10
+                mclass.num_blocks             = 5
                 mclass.set_mask(motion_mask_st)
             else:
                 mclass.threshold              = 80
@@ -230,22 +248,6 @@ def loop(   camera,
 
     camera.stop_recording(splitter_port=2)
     camera.stop_recording()
-
-def create_mask(camera,loglevel=1,praefix=""):
-    if loglevel == 0:
-        print("Some image will be taken")
-
-    fname   = praefix+"mask_image"
-
-    if loglevel == 0:
-        print("Capture image")
-    camera.capture(fname+".png")
-
-    if loglevel == 0:
-        print("Taking second image with 640 by 480")
-    camera.capture(fname+"640_480.png",resize=(640,480))
-
-    camera.stop_preview()
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT,  signal_handler)
@@ -283,10 +285,10 @@ if __name__ == "__main__":
 
     if loglevel == 0:
         print(fname)
+        print(read_status_file())
 
     cam                 = init_camera(loglevel=int(options.loglevel))
 
-    print(read_status_file())
 
     if options.create_mask:
         create_mask(    cam,
