@@ -205,8 +205,8 @@ def loop(   camera,
             debug_file.close()
         if flags[2]:
             fname   = "{}{}".format(praefix,dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S"))
-            camera.capture("{}.jpg",format(fname), use_video_port=True)
-            flags[2] = not(flags[2]
+            camera.capture("{}.jpg".format(fname), use_video_port=True)
+            flags[2] = not(flags[2])
             write_status_file(flags)
 
         if loglevel == 0:
@@ -263,8 +263,8 @@ def loop(   camera,
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
-                mclass.threshold              = 10
-                mclass.num_blocks             = 6
+                mclass.threshold              = 5
+                mclass.num_blocks             = 3
                 mclass.set_mask(motion_mask_st)
             else:
                 mclass.threshold              = 80
