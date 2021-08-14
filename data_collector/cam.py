@@ -217,9 +217,11 @@ def loop(   camera,
         camera.wait_recording(0.2)
         if motion_detected or flags[0]:
             fname   = "{}{}".format(praefix,dt.datetime.strftime(dt.datetime.now(),"%Y%m%d_%H%M%S"))
+
             if loglevel < 2:
                 print("Motion at: {}".format(fname.split("/")[-1]))
             camera.split_recording("{}_during.mp4".format(fname),splitter_port=1)
+            camera.capture("{}.jpg".format(fname), use_video_port=True)
             stream.copy_to("{}_before.mp4".format(fname),seconds=buffer_time)
             stream.clear()
             while (motion_detected or flags[0]) and keep_running:
@@ -258,13 +260,19 @@ def loop(   camera,
             if loglevel == 0:
                 print(gps_point)
 
-            spee        = float(gps_point[-1])
+            try:
+                speed       = float(gps_point[-1])
+                spee        = speed
+            except:
+                if loglevel == 0:
+                    print("could not Read Speed from GPS")
+
             if loglevel == 0:
                 print("speed={}".format(spee))
 
             if spee <= 5.0:
                 mclass.threshold              = 5
-                mclass.num_blocks             = 3
+                mclass.num_blocks             = 4
                 mclass.set_mask(motion_mask_st)
             else:
                 mclass.threshold              = 80
