@@ -39,13 +39,16 @@ class MotionDetec(array.PiMotionAnalysis):
         self.num_blocks             = num_blocks
         self.num_no_motion_frames   = num_no_motion_frames
         self.set_mask(local_motion_mask)
+        self.lock                   = False
 
     def set_mask(self,mask):
+        self.lock                   = True
         self.motion_mask            = mask
         self.motion_mask            = np.pad(   self.motion_mask,
                                                 ((0,0),(0,1)),
                                                 mode="constant",
                                                 constant_values=0)
+        self.lock                   = False
 
     def analyse(self, a):
         global motion_detected
@@ -53,6 +56,9 @@ class MotionDetec(array.PiMotionAnalysis):
         global debug_file
         a = np.sqrt(np.square(a['x'].astype(float)) +
                     np.square(a['y'].astype(float)))
+
+        while (self.lock):
+            time.sleep(0.05)
 
         a = a*self.motion_mask
 
@@ -176,6 +182,7 @@ def loop(   camera,
     l_data_ti       = 0.
     speed           = np.ones(30)
     counter         = 0
+    standing_mode   = False
 
     #Use circular io buffor
     if loglevel == 0:
@@ -189,6 +196,8 @@ def loop(   camera,
         print("Set up motion detection on 640x480 resolution")
     mclass = MotionDetec(   camera,
                             size=(640,480),
+                            threshold=80,
+                            num_blocks=7,
                             num_no_motion_frames=camera.framerate*10,
                             local_motion_mask=motion_mask)
 
@@ -270,14 +279,20 @@ def loop(   camera,
             if loglevel == 0:
                 print("speed={}".format(spee))
 
-            if spee <= 5.0:
+            if spee <= 5.0 and not(standing_mode):
+                if loglevel == 0:
+                    print("Setting mode to standing mode")
                 mclass.threshold              = 5
                 mclass.num_blocks             = 4
                 mclass.set_mask(motion_mask_st)
-            else:
+                standing_mode                 = True
+            elif spee > 5.0 and standing_mode:
+                if loglevel == 0:
+                    print("Setting mode to rolling mode")
                 mclass.threshold              = 80
                 mclass.num_blocks             = 7
                 mclass.set_mask(motion_mask)
+                standing_mode                 = False
 
             l_data_ti   = c_ti
             counter    += 1
