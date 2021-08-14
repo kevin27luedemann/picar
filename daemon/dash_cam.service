@@ -7,7 +7,7 @@
  User=pi
  Group=pi
  Restart=always
- ExecStart=/usr/bin/python3 /home/pi/Documents/picar/data_collector/cam.py --loglevel 2 --praefix /videos/ --mask /videos/mask_rolling.png --mask_standing /videos/mask_standing.png --DEBUG
+ ExecStart=/usr/bin/python3 /home/pi/Documents/picar/data_collector/cam.py --loglevel 2 --praefix /videos/ --mask /videos/mask_rolling.png --mask_standing /videos/mask_standing.png
 
  [Install]
  WantedBy=multi-user.target
