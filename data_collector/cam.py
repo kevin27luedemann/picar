@@ -236,6 +236,46 @@ def loop(   camera,
             while (motion_detected or flags[0]) and keep_running:
                 flags       = read_status_file()
                 camera.wait_recording(0.5)
+                #Handle GPS data once every second
+                c_ti    = time.time()
+                if c_ti - l_data_ti >= 1.:
+                    if loglevel == 0:
+                        print("counter={}".format(counter))
+                    #Speed in km/h
+                    with open("/tmp/gps.data","r") as dafi:
+                        gps_point   = dafi.readline()
+                    gps_point   = gps_point.split("\t")
+                    if loglevel == 0:
+                        print(gps_point)
+
+                    try:
+                        speed       = float(gps_point[-1])
+                        spee        = speed
+                    except:
+                        if loglevel == 0:
+                            print("could not Read Speed from GPS")
+
+                    if loglevel == 0:
+                        print("speed={}".format(spee))
+
+                    if spee <= 5.0 and not(standing_mode):
+                        if loglevel == 0:
+                            print("Setting mode to standing mode")
+                        mclass.threshold              = 5
+                        mclass.num_blocks             = 4
+                        mclass.set_mask(motion_mask_st)
+                        standing_mode                 = True
+                    elif spee > 5.0 and standing_mode:
+                        if loglevel == 0:
+                            print("Setting mode to rolling mode")
+                        mclass.threshold              = 80
+                        mclass.num_blocks             = 7
+                        mclass.set_mask(motion_mask)
+                        standing_mode                 = False
+
+                    l_data_ti   = c_ti
+                    counter    += 1
+                    counter    %= 30
 
             if loglevel == 0:
                 print("Motion done, splitting back to circular io")
