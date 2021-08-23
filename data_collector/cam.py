@@ -22,6 +22,10 @@ motion_detected     = False
 keep_running        = True
 debug_file          = None
 flags               = None
+mth_roll            = 75
+mbl_roll            = 15
+mth_stan            = 5
+mbl_stan            = 4
 #Handle the SIGINT interrupt
 def signal_handler(signum, frame):
     global keep_running
@@ -177,6 +181,10 @@ def loop(   camera,
     global keep_running
     global flags
     global debug_file
+    global mth_stan
+    global mbl_stan
+    global mth_roll
+    global mbl_roll
 
     #setting up GPS buffer
     l_data_ti       = 0.
@@ -196,8 +204,8 @@ def loop(   camera,
         print("Set up motion detection on 640x480 resolution")
     mclass = MotionDetec(   camera,
                             size=(640,480),
-                            threshold=80,
-                            num_blocks=7,
+                            threshold=mth_roll,
+                            num_blocks=mbl_roll,
                             num_no_motion_frames=camera.framerate*10,
                             local_motion_mask=motion_mask)
 
@@ -261,15 +269,15 @@ def loop(   camera,
                     if spee <= 5.0 and not(standing_mode):
                         if loglevel == 0:
                             print("Setting mode to standing mode")
-                        mclass.threshold              = 5
-                        mclass.num_blocks             = 4
+                        mclass.threshold              = mth_stan
+                        mclass.num_blocks             = mbl_stan
                         mclass.set_mask(motion_mask_st)
                         standing_mode                 = True
                     elif spee > 5.0 and standing_mode:
                         if loglevel == 0:
                             print("Setting mode to rolling mode")
-                        mclass.threshold              = 80
-                        mclass.num_blocks             = 7
+                        mclass.threshold              = mth_roll
+                        mclass.num_blocks             = mbl_roll
                         mclass.set_mask(motion_mask)
                         standing_mode                 = False
 
@@ -322,15 +330,15 @@ def loop(   camera,
             if spee <= 5.0 and not(standing_mode):
                 if loglevel == 0:
                     print("Setting mode to standing mode")
-                mclass.threshold              = 5
-                mclass.num_blocks             = 4
+                mclass.threshold              = mth_stan
+                mclass.num_blocks             = mbl_stan
                 mclass.set_mask(motion_mask_st)
                 standing_mode                 = True
             elif spee > 5.0 and standing_mode:
                 if loglevel == 0:
                     print("Setting mode to rolling mode")
-                mclass.threshold              = 80
-                mclass.num_blocks             = 7
+                mclass.threshold              = mth_roll
+                mclass.num_blocks             = mbl_roll
                 mclass.set_mask(motion_mask)
                 standing_mode                 = False
 
