@@ -23,7 +23,7 @@ keep_running        = True
 debug_file          = None
 flags               = None
 mth_roll            = 75
-mbl_roll            = 15
+mbl_roll            = 13
 mth_stan            = 5
 mbl_stan            = 4
 #Handle the SIGINT interrupt
