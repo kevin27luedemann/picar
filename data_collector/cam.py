@@ -22,7 +22,7 @@ motion_detected     = False
 keep_running        = True
 debug_file          = None
 flags               = None
-mth_roll            = 75
+mth_roll            = 40
 mbl_roll            = 13
 mth_stan            = 5
 mbl_stan            = 4
@@ -191,6 +191,9 @@ def loop(   camera,
     speed           = np.ones(30)
     counter         = 0
     standing_mode   = False
+    duration        = 0.
+    wait_time       = 0.5
+    max_duration    = wait_time*20*60
 
     #Use circular io buffor
     if loglevel == 0:
@@ -237,13 +240,23 @@ def loop(   camera,
 
             if loglevel < 2:
                 print("Motion at: {}".format(fname.split("/")[-1]))
-            camera.split_recording("{}_during.mp4".format(fname),splitter_port=1)
-            camera.capture("{}.jpg".format(fname), use_video_port=True)
-            stream.copy_to("{}_before.mp4".format(fname),seconds=buffer_time)
+            camera.split_recording( "{}_during.mp4".format(fname),
+                                    splitter_port=1)
+            camera.capture( "{}.jpg".format(fname),
+                            use_video_port=True,
+                            splitter_port=1)
+            stream.copy_to( "{}_before.mp4".format(fname),
+                            seconds=buffer_time)
             stream.clear()
-            while (motion_detected or flags[0]) and keep_running:
+            while   (motion_detected or flags[0]) \
+                    and keep_running \
+                    and duration < max_duration:
+
                 flags       = read_status_file()
-                camera.wait_recording(0.5)
+                #wait and increase video duration
+                camera.wait_recording(wait_time)
+                duration   += wait_time
+
                 #Handle GPS data once every second
                 c_ti    = time.time()
                 if c_ti - l_data_ti >= 1.:
@@ -284,6 +297,9 @@ def loop(   camera,
                     l_data_ti   = c_ti
                     counter    += 1
                     counter    %= 30
+
+            #Reset video duration for next run
+            duration = 0.
 
             if loglevel == 0:
                 print("Motion done, splitting back to circular io")
