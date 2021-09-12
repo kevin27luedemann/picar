@@ -243,8 +243,7 @@ def loop(   camera,
             camera.split_recording( "{}_during.mp4".format(fname),
                                     splitter_port=1)
             camera.capture( "{}.jpg".format(fname),
-                            use_video_port=True,
-                            splitter_port=1)
+                            use_video_port=True)
             stream.copy_to( "{}_before.mp4".format(fname),
                             seconds=buffer_time)
             stream.clear()
