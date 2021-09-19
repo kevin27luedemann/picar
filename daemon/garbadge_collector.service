@@ -1,0 +1,13 @@
+ [Unit]
+ Description=Dash cam service
+ After=multi-user.target
+
+ [Service]
+ Type=idle
+ User=pi
+ Group=pi
+ Restart=always
+ ExecStart=/usr/bin/python3 /home/pi/Documents/picar/garbadge_collector/clean.py
+
+ [Install]
+ WantedBy=multi-user.target
