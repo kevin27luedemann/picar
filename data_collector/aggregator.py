@@ -21,8 +21,8 @@ def signal_handler(signum, frame):
     global keep_running
     keep_running    = False
 
-def loop(   loglevel    = 1,
-            avg_sec     = 30):
+def loop(   prefix      = "",
+            loglevel    = 1):
     global keep_running
 
     #setting up GPS buffer
@@ -30,38 +30,27 @@ def loop(   loglevel    = 1,
     sensor_data     = []
     counter         = 0
 
-    #Do some stuff while motion is not detected and wait
-    #start   = dt.now()
-    #while dt.now()-start < tidt(seconds=30.):
     while keep_running:
         #Handle GPS data once every second
         c_ti    = time.time()
         if c_ti - l_data_ti >= 1.:
+            GPS_data    = np.genfromtxt("/tmp/gps.data")
+            sensor_data = np.genfromtxt("/tmp/sensors.data")
             if loglevel == 0:
-                print("counter={}".format(counter))
-            GPS_point       = format_gps_data()
-            #Speed in km/h
-            speed[counter]  = float(GPS_point[3])*3.6
-            if np.isnan(speed[counter]):
-                speed[counter] = 0.0
-            spee        = np.mean(speed)
-            if loglevel == 0:
-                print("speed={}".format(spee))
+                print(GPS_data)
+                print(sensor_data)
+            out_data = ""
+            for da in GPS_data:
+                out_data    += "{}\t".format(da)
 
-            out = ""
-            for da in GPS_point:
-                out += "{}\t".format(da)
-
-            out += "{}".format(spee)
-
-            if loglevel == 0:
-                print(out)
-            with open("/tmp/gps.data","w") as fi:
-                fi.write(out)
-
-            l_data_ti   = c_ti
-            counter    += 1
-            counter    %= int(avg_sec)
+            for da in sensor_data[:-1]:
+                out_data    += "{}\t".format(da)
+            out_data        += "{}\n".format(sensor_data[-1])
+            #combine all data and write to file
+            fname       = dt.datetime.strftime(dt.now(),"%Y%m%d.txt")
+            fname       = os.path.join(prefix,fname)
+            with open(fname,"a") as output:
+                output.write(out_data)
         time.sleep(0.2)
 
 if __name__ == "__main__":
@@ -70,8 +59,8 @@ if __name__ == "__main__":
 
     parser = OptionParser()
 
-    parser.add_option(  "-f", "--praefix", dest="praefix",default="",
-                        help="File praefix and folder localtion")
+    parser.add_option(  "-f", "--prefix", dest="prefix",default="./",
+                        help="File prefix and folder localtion")
     parser.add_option(  "", "--postfix", dest="postfix",
                         default="",
                         help="Specify custom input file postfix")
@@ -80,4 +69,5 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
 
-    loop(  loglevel=int(options.loglevel))
+    loop(  prefix=options.prefix,
+            loglevel=int(options.loglevel))
