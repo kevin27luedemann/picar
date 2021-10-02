@@ -29,6 +29,8 @@ def loop(   prefix      = "",
     GPS_data        = []
     sensor_data     = []
     counter         = 0
+    c_ti            = time.time()
+    l_data_ti       = c_ti
 
     while keep_running:
         #Handle GPS data once every second
@@ -47,10 +49,11 @@ def loop(   prefix      = "",
                 out_data    += "{}\t".format(da)
             out_data        += "{}\n".format(sensor_data[-1])
             #combine all data and write to file
-            fname       = dt.datetime.strftime(dt.now(),"%Y%m%d.txt")
+            fname       = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d.txt")
             fname       = os.path.join(prefix,fname)
             with open(fname,"a") as output:
                 output.write(out_data)
+            l_data_ti   = c_ti
         time.sleep(0.2)
 
 if __name__ == "__main__":
